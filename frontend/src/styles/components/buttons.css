@@ -1,0 +1,109 @@
+/* Button Styles */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-primary);
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.5;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:focus {
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary Button */
+.btn-primary {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--gray-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: transparent;
+  color: var(--gray-800);
+  border: 2px solid var(--gray-800);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--gray-800);
+  color: var(--white);
+  transform: translateY(-1px);
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-transform: none;
+  letter-spacing: 0.3px;
+}
+
+.modern-submit {
+  background: var(--gray-800);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.modern-submit::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.modern-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--gray-700);
+  box-shadow: var(--shadow-lg);
+}
+
+.modern-submit:hover::before {
+  left: 100%;
+}
+
+.modern-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.modern-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-text-hidden {
+  opacity: 0;
+}

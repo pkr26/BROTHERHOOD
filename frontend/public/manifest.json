@@ -1,0 +1,20 @@
+{
+  "short_name": "Brotherhood",
+  "name": "Brotherhood - Connect, Share, and Grow Together",
+  "icons": [
+    {
+      "src": "brotherhood-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "brotherhood-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

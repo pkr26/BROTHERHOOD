@@ -1,0 +1,19 @@
+/* Main Style Entry Point */
+
+/* Base Styles */
+@import './styles/base/variables.css';
+@import './styles/base/reset.css';
+@import './styles/base/typography.css';
+
+/* Component Styles */
+@import './styles/components/buttons.css';
+@import './styles/components/forms.css';
+@import './styles/components/cards.css';
+
+/* Utility Styles */
+@import './styles/utils/utilities.css';
+@import './styles/utils/animations.css';
+
+/* Page-specific Styles */
+@import './styles/Auth.css';
+@import './styles/Dashboard.css';

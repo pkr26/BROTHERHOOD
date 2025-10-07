@@ -1,0 +1,198 @@
+/* Form Styles */
+
+/* Form Groups */
+.form-group {
+  margin-bottom: var(--space-lg);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+/* Basic Form Inputs */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-primary);
+  font-size: var(--text-base);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--gray-700);
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-input::placeholder {
+  color: var(--gray-400);
+}
+
+/* Modern Input Groups */
+.modern-input-group {
+  position: relative;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.modern-input {
+  width: 100%;
+  padding: 16px 48px;
+  font-size: 16px;
+  font-weight: 400;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  background: var(--white);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--gray-800);
+  outline: none;
+}
+
+.modern-input:hover {
+  border-color: var(--gray-300);
+}
+
+.modern-input:focus {
+  border-color: var(--gray-700);
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+/* Floating Labels */
+.floating-label {
+  position: absolute;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-500);
+  font-size: 16px;
+  font-weight: 400;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--white);
+  padding: 0 6px;
+}
+
+.modern-input:focus ~ .floating-label,
+.modern-input:not(:placeholder-shown) ~ .floating-label {
+  top: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-700);
+  background: var(--white);
+}
+
+/* Input Icons */
+.input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--gray-400);
+  pointer-events: none;
+  transition: color 0.3s ease;
+}
+
+.modern-input:focus ~ .input-icon {
+  color: var(--gray-700);
+}
+
+/* Password Toggle */
+.password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--gray-400);
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.password-toggle:hover {
+  color: var(--gray-700);
+  background: var(--gray-100);
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Form Options */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+/* Custom Checkbox */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--gray-300);
+  border-radius: 6px;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.checkbox-custom::after {
+  content: '';
+  width: 12px;
+  height: 7px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) scale(0);
+  transition: transform 0.2s ease;
+  position: absolute;
+  top: 3px;
+}
+
+.checkbox-container input[type="checkbox"]:checked ~ .checkbox-custom {
+  background: var(--gray-800);
+  border-color: var(--gray-800);
+}
+
+.checkbox-container input[type="checkbox"]:checked ~ .checkbox-custom::after {
+  transform: rotate(-45deg) scale(1);
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: var(--gray-600);
+  font-weight: 400;
+}
