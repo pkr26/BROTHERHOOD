@@ -1,91 +1,130 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { MdPhotoLibrary, MdPeople, MdMood, MdLocationOn } from 'react-icons/md';
+import toast from 'react-hot-toast';
+import { GrowthIcon, CommunityIcon, ChallengeIcon, ResilienceIcon } from '../Icons';
+import { getUserInitials, getDisplayName, getFullName, formatUserAge } from '../../utils/userHelpers';
+import { sanitizeInput } from '../../utils/validation';
 
+// Content validation constants
+const MAX_POST_LENGTH = 5000;
+const MIN_POST_LENGTH = 1;
+
+/**
+ * Create post component with modal
+ *
+ * @param {Object} props
+ * @param {Object} props.user - Current user object
+ * @param {Function} props.onCreatePost - Callback when post is created
+ */
 const CreatePost = ({ user, onCreatePost }) => {
   const [postContent, setPostContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getUserInitials = () => {
-    if (!user) return 'U';
-    const firstInitial = user.first_name ? user.first_name[0] : '';
-    const lastInitial = user.last_name ? user.last_name[0] : '';
-    return (firstInitial + lastInitial).toUpperCase() || 'U';
-  };
-
-  const calculateAge = (dateOfBirth) => {
-    if (!dateOfBirth) return null;
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (postContent.trim()) {
+
+    const trimmedContent = postContent.trim();
+
+    // Validation
+    if (!trimmedContent) {
+      toast.error('Post content cannot be empty');
+      return;
+    }
+
+    if (trimmedContent.length < MIN_POST_LENGTH) {
+      toast.error('Post is too short');
+      return;
+    }
+
+    if (trimmedContent.length > MAX_POST_LENGTH) {
+      toast.error(`Post is too long. Maximum ${MAX_POST_LENGTH} characters allowed.`);
+      return;
+    }
+
+    // Prevent double submission
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Sanitize content to prevent XSS
+      const sanitizedContent = sanitizeInput(trimmedContent, {
+        ALLOWED_TAGS: ['br'], // Only allow line breaks
+        ALLOWED_ATTR: [],
+      });
+
       const newPost = {
-        id: Date.now(),
+        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Temporary ID until backend assigns real one
         user: {
           username: user?.username || 'anon1234',
-          age: calculateAge(user?.date_of_birth),
+          age: user?.age,
           avatar: null,
-          initials: getUserInitials()
+          initials: getUserInitials(user),
         },
-        content: postContent,
+        content: sanitizedContent,
         timestamp: 'Just now',
         likes: 0,
         comments: 0,
         shares: 0,
-        liked: false
+        liked: false,
       };
 
-      onCreatePost(newPost);
+      await onCreatePost(newPost);
       setPostContent('');
       setIsExpanded(false);
+      toast.success('Post created successfully!');
+    } catch (error) {
+      toast.error('Failed to create post. Please try again.');
+      console.error('Post creation error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="create-post-card">
       <div className="create-post-header">
-        <div className="user-avatar">
-          {getUserInitials()}
+        <div className="user-avatar" aria-hidden="true">
+          {getUserInitials(user)}
         </div>
         <button
-          className="create-post-input"
+          className="create-post-input hover-lift"
           onClick={() => setIsExpanded(true)}
+          aria-label="Create a new post"
         >
-          How are you feeling today, {user?.first_name}?
+          What's on your mind, {getDisplayName(user)}? Your brothers are here to
+          listen...
         </button>
       </div>
 
       {isExpanded && (
-        <div className="create-post-modal">
-          <div className="modal-overlay" onClick={() => setIsExpanded(false)}></div>
+        <div className="create-post-modal" role="dialog" aria-modal="true" aria-labelledby="create-post-title">
+          <div
+            className="modal-overlay"
+            onClick={() => setIsExpanded(false)}
+            aria-hidden="true"
+          />
           <div className="modal-content">
             <div className="modal-header">
-              <h2>Create Post</h2>
+              <h2 id="create-post-title">Create Post</h2>
               <button
                 className="close-button"
                 onClick={() => setIsExpanded(false)}
+                aria-label="Close modal"
               >
                 ✕
               </button>
             </div>
 
             <div className="modal-user">
-              <div className="user-avatar">
-                {getUserInitials()}
+              <div className="user-avatar" aria-hidden="true">
+                {getUserInitials(user)}
               </div>
               <div>
-                <div className="user-name">
-                  {user?.first_name} {user?.last_name}
-                </div>
+                <div className="user-name">{getFullName(user)}</div>
                 <div className="post-privacy">
-                  🌐 Public
+                  <span aria-label="Public post">🌐 Public</span>
                 </div>
               </div>
             </div>
@@ -93,28 +132,58 @@ const CreatePost = ({ user, onCreatePost }) => {
             <form onSubmit={handleSubmit}>
               <textarea
                 className="post-textarea"
-                placeholder={`How are you feeling today, ${user?.first_name}? Share what's on your mind...`}
+                placeholder={`${getDisplayName(
+                  user
+                )}, this is a safe space. Share your struggles, victories, or just how you're feeling. Your brotherhood is here to support you through everything...`}
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
                 autoFocus
-                rows="4"
+                rows="5"
+                maxLength={MAX_POST_LENGTH}
+                aria-label="Post content"
+                disabled={isSubmitting}
               />
+              {postContent.length > 0 && (
+                <div className="text-xs text-gray-500 px-6 -mt-2">
+                  {postContent.length} / {MAX_POST_LENGTH} characters
+                </div>
+              )}
 
               <div className="modal-actions">
                 <div className="add-to-post">
                   <span>Add to your post</span>
-                  <div className="post-options">
-                    <button type="button" className="option-button" title="Photo/Video">
-                      📷
+                  <div className="post-options" role="group" aria-label="Post options">
+                    <button
+                      type="button"
+                      className="option-button hover-grow"
+                      title="Photo/Video"
+                      aria-label="Add photo or video"
+                    >
+                      <MdPhotoLibrary />
                     </button>
-                    <button type="button" className="option-button" title="Tag Friends">
-                      👥
+                    <button
+                      type="button"
+                      className="option-button hover-grow"
+                      title="Tag Brothers"
+                      aria-label="Tag brothers"
+                    >
+                      <MdPeople />
                     </button>
-                    <button type="button" className="option-button" title="Feeling">
-                      😊
+                    <button
+                      type="button"
+                      className="option-button hover-grow"
+                      title="Mood"
+                      aria-label="Add mood"
+                    >
+                      <MdMood />
                     </button>
-                    <button type="button" className="option-button" title="Location">
-                      📍
+                    <button
+                      type="button"
+                      className="option-button hover-grow"
+                      title="Location"
+                      aria-label="Add location"
+                    >
+                      <MdLocationOn />
                     </button>
                   </div>
                 </div>
@@ -122,9 +191,10 @@ const CreatePost = ({ user, onCreatePost }) => {
                 <button
                   type="submit"
                   className="post-button"
-                  disabled={!postContent.trim()}
+                  disabled={!postContent.trim() || isSubmitting}
+                  aria-label="Publish post"
                 >
-                  Post
+                  {isSubmitting ? 'Posting...' : 'Post'}
                 </button>
               </div>
             </form>
@@ -133,21 +203,21 @@ const CreatePost = ({ user, onCreatePost }) => {
       )}
 
       <div className="create-post-footer">
-        <button className="footer-button">
-          <span className="button-icon">📖</span>
-          <span>Share Your Story</span>
+        <button className="footer-button hover-lift" aria-label="Need support">
+          <span>🆘</span>
+          <span>Need Support</span>
         </button>
-        <button className="footer-button">
-          <span className="button-icon">✓</span>
+        <button className="footer-button hover-lift" aria-label="Share growth">
+          <span>📊</span>
+          <span>Share Growth</span>
+        </button>
+        <button className="footer-button hover-lift" aria-label="Check-in">
+          <span>✅</span>
           <span>Check-In</span>
         </button>
-        <button className="footer-button">
-          <span className="button-icon">🤝</span>
-          <span>Ask for Support</span>
-        </button>
-        <button className="footer-button">
-          <span className="button-icon">🏆</span>
-          <span>Share a Win</span>
+        <button className="footer-button hover-lift" aria-label="Victory story">
+          <span>🏆</span>
+          <span>Victory Story</span>
         </button>
       </div>
     </div>

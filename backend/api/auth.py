@@ -3,14 +3,14 @@ from sqlalchemy.orm import Session
 from core.database import get_db
 from core.security import verify_password, get_password_hash, create_access_token, decode_token
 from core.utils import generate_unique_username
-from schemas import UserCreate, UserLogin, UserResponse, LoginResponse
+from schemas import UserCreate, UserLogin, UserResponse, LoginResponse, RegisterResponse
 from models import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+async def register(response: Response, user_data: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.email == user_data.email).first()
 
     if existing_user:
@@ -35,7 +35,31 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return new_user
+
+    # Create access token and set cookie (auto-login after registration)
+    access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
+
+    # Set HTTP-only cookie for secure authentication
+    response.set_cookie(
+        key="session_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        max_age=86400  # 24 hours
+    )
+
+    return RegisterResponse(
+        message="Registration successful",
+        user={
+            "id": new_user.id,
+            "email": new_user.email,
+            "username": new_user.username,
+            "first_name": new_user.first_name,
+            "last_name": new_user.last_name,
+            "date_of_birth": new_user.date_of_birth.isoformat() if new_user.date_of_birth else None
+        }
+    )
 
 
 @router.post("/login", response_model=LoginResponse)

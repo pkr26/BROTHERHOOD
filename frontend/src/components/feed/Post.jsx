@@ -1,6 +1,20 @@
-import React, { useState } from 'react';
-import { MdThumbUp, MdComment } from 'react-icons/md';
+import { useState } from 'react';
+import { MdMoreVert, MdShare } from 'react-icons/md';
+import toast from 'react-hot-toast';
+import { EmpathyIcon, SupportIcon, StrengthIcon } from '../Icons';
+import { formatUserAge } from '../../utils/userHelpers';
+import { sanitizeInput } from '../../utils/validation';
 
+// Comment validation constants
+const MAX_COMMENT_LENGTH = 500;
+
+/**
+ * Post card component
+ *
+ * @param {Object} props
+ * @param {Object} props.post - Post data object
+ * @param {Function} props.onLike - Like handler
+ */
 const Post = ({ post, onLike }) => {
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState('');
@@ -8,75 +22,132 @@ const Post = ({ post, onLike }) => {
 
   const handleComment = (e) => {
     e.preventDefault();
-    if (comment.trim()) {
-      setComments([...comments, {
-        id: Date.now(),
-        text: comment,
-        user: 'You',
-        timestamp: 'Just now'
-      }]);
-      setComment('');
+    const trimmedComment = comment.trim();
+
+    if (!trimmedComment) {
+      return;
     }
+
+    if (trimmedComment.length > MAX_COMMENT_LENGTH) {
+      toast.error(`Comment is too long. Maximum ${MAX_COMMENT_LENGTH} characters allowed.`);
+      return;
+    }
+
+    // Sanitize comment to prevent XSS
+    const sanitizedComment = sanitizeInput(trimmedComment, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: [],
+    });
+
+    setComments([
+      ...comments,
+      {
+        id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: sanitizedComment,
+        user: 'You',
+        timestamp: 'Just now',
+      },
+    ]);
+    setComment('');
   };
 
   return (
-    <div className="post-card">
+    <article className="post-card">
       {/* Post Header */}
-      <div className="post-header">
+      <header className="post-header">
         <div className="post-user">
-          <div className="user-avatar">
+          <div className="user-avatar" aria-hidden="true">
             {post.user.initials}
           </div>
           <div className="user-info">
-            <div className="user-name">{post.user.username} {post.user.age ? `(Age: ${post.user.age})` : ''}</div>
-            <div className="post-timestamp">{post.timestamp}</div>
+            <div className="user-name">
+              {post.user.username}{' '}
+              {post.user.age && `(${formatUserAge(post.user.age)})`}
+            </div>
+            <time className="post-timestamp" dateTime={new Date().toISOString()}>
+              {post.timestamp}
+            </time>
           </div>
         </div>
-        <button className="post-menu">⋯</button>
-      </div>
+        <button
+          className="post-menu hover-grow"
+          aria-label="Post options"
+          aria-haspopup="true"
+        >
+          <MdMoreVert />
+        </button>
+      </header>
 
       {/* Post Content */}
       <div className="post-content">
-        <p>{post.content}</p>
+        <p dangerouslySetInnerHTML={{ __html: post.content }} />
         {post.image && (
           <div className="post-image">
-            <img src={post.image} alt="Post" />
+            <img
+              src={post.image}
+              alt="Post attachment"
+              loading="lazy"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                toast.error('Failed to load image');
+              }}
+            />
           </div>
         )}
       </div>
 
       {/* Post Stats */}
-      <div className="post-stats">
+      <div className="post-stats" role="group" aria-label="Post statistics">
         <div className="stats-left">
           {post.likes > 0 && (
-            <span className="like-count">
-              🤝 {post.likes} {post.likes === 1 ? 'brother relates' : 'brothers relate'}
-            </span>
+            <button
+              className="like-count"
+              onClick={onLike}
+              aria-label={`${post.likes} Hell Yeah Brother`}
+            >
+              <span className="text-lg">🔥</span>
+              <span>
+                {post.likes}
+              </span>
+            </button>
           )}
         </div>
         <div className="stats-right">
-          {post.comments > 0 && (
-            <span className="comment-count">
-              {post.comments} {post.comments === 1 ? 'brother helped' : 'brothers helped'}
-            </span>
+          {(comments.length > 0 || post.comments > 0) && (
+            <button
+              className="comment-count"
+              onClick={() => setShowComments(!showComments)}
+              aria-label={`${comments.length || post.comments} ${
+                (comments.length || post.comments) === 1 ? 'comment' : 'comments'
+              }`}
+            >
+              <span className="text-lg">💬</span>
+              <span>
+                {comments.length || post.comments} {(comments.length || post.comments) === 1 ? 'comment' : 'comments'}
+              </span>
+            </button>
           )}
         </div>
       </div>
 
       {/* Post Actions */}
-      <div className="post-actions">
+      <div className="post-actions" role="group" aria-label="Post actions">
         <button
-          className={`action-button ${post.liked ? 'liked' : ''}`}
+          className={`action-button hover-lift ${post.liked ? 'liked' : ''}`}
           onClick={onLike}
+          aria-label={post.liked ? 'Remove support' : 'Hell yeah Brother'}
+          aria-pressed={post.liked}
         >
-          <MdThumbUp />
-          <span>I Relate</span>
+          <span className="text-xl">{post.liked ? '🔥' : '🔥'}</span>
+          <span className={post.liked ? 'font-semibold' : ''}>Hell Yeah Brother</span>
         </button>
         <button
-          className="action-button"
+          className="action-button hover-lift"
           onClick={() => setShowComments(!showComments)}
+          aria-label="Help your brother"
+          aria-expanded={showComments}
         >
-          <MdComment />
+          <span className="text-xl">💬</span>
           <span>Help Your Brother</span>
         </button>
       </div>
@@ -85,31 +156,37 @@ const Post = ({ post, onLike }) => {
       {showComments && (
         <div className="post-comments">
           <form onSubmit={handleComment} className="comment-form">
-            <div className="user-avatar small">U</div>
+            <div className="user-avatar small" aria-hidden="true">
+              U
+            </div>
             <input
               type="text"
               className="comment-input"
               placeholder="Offer support or share your experience..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              maxLength={MAX_COMMENT_LENGTH}
+              aria-label="Write a comment"
             />
-            <button type="submit" className="comment-submit">
+            <button type="submit" className="comment-submit" aria-label="Submit comment">
               ➤
             </button>
           </form>
 
-          {comments.map(c => (
+          {comments.map((c) => (
             <div key={c.id} className="comment">
-              <div className="user-avatar small">
+              <div className="user-avatar small" aria-hidden="true">
                 {c.user[0]}
               </div>
               <div className="comment-content">
                 <div className="comment-bubble">
                   <div className="comment-user">{c.user}</div>
-                  <div className="comment-text">{c.text}</div>
+                  <div className="comment-text" dangerouslySetInnerHTML={{ __html: c.text }} />
                 </div>
                 <div className="comment-actions">
-                  <span className="comment-time">{c.timestamp}</span>
+                  <time className="comment-time" dateTime={new Date().toISOString()}>
+                    {c.timestamp}
+                  </time>
                   <button className="comment-action">Helpful</button>
                   <button className="comment-action">Reply</button>
                 </div>
@@ -118,7 +195,7 @@ const Post = ({ post, onLike }) => {
           ))}
         </div>
       )}
-    </div>
+    </article>
   );
 };
 

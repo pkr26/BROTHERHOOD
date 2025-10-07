@@ -1,5 +1,3 @@
-import React from 'react';
-
 const BrotherhoodLogo = ({ className = '', size = 24 }) => {
   return (
     <svg

@@ -1,356 +1,217 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axiosInstance from '../utils/axios';
-import BrotherhoodLogo from '../components/BrotherhoodLogo';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { MdEmail, MdPerson, MdCalendarToday, MdCheck } from 'react-icons/md';
+import { useAuth } from '../contexts/AuthContext';
 import {
-  MdEmail,
-  MdLock,
-  MdVisibility,
-  MdVisibilityOff,
-  MdPerson,
-  MdCheck,
-  MdClose
-} from 'react-icons/md';
-import PasswordStrength from '../components/PasswordStrength';
+  validateEmail,
+  validatePassword,
+  validateName,
+  validateDateOfBirth,
+} from '../utils/validation';
+import { ButtonLoader } from '../components/common/Loading';
+import AuthLayout from '../components/layouts/AuthLayout';
+import FormField from '../components/forms/FormField';
+import PasswordInput from '../components/forms/PasswordInput';
+import PasswordStrengthIndicator from '../components/forms/PasswordStrengthIndicator';
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    first_name: '',
-    last_name: '',
-    date_of_birth: '',
-    acceptTerms: false
-  });
-  const [error, setError] = useState('');
+  const { register: registerUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
-    setIsTyping(true);
-    setTimeout(() => setIsTyping(false), 100);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+    setError,
+  } = useForm({
+    mode: 'onBlur',
+  });
 
-    // Clear error when user starts typing
-    if (error) setError('');
-  };
+  const password = watch('password');
 
-  const validateForm = () => {
-    if (!formData.email || !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      setError('Please enter a valid email address');
-      return false;
-    }
-
-    if (!formData.password || formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return false;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-
-    if (!formData.acceptTerms) {
-      setError('Please accept the terms and conditions');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccessMessage('');
-
-    if (!validateForm()) {
-      // Add shake animation to form
-      const form = document.querySelector('.auth-form');
-      form.classList.add('shake');
-      setTimeout(() => form.classList.remove('shake'), 500);
-      return;
-    }
-
+  const onSubmit = async (data) => {
     setLoading(true);
 
     try {
-      // Prepare data for API
-      const { confirmPassword, acceptTerms, ...registrationData } = formData;
+      const result = await registerUser({
+        email: data.email,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        date_of_birth: data.dateOfBirth,
+      });
 
-      await axiosInstance.post('/api/auth/register', registrationData);
-
-      // Registration successful
-      setSuccessMessage('Registration successful! Redirecting to login...');
-
-      // Redirect after 2 seconds
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred during registration');
-      // Add shake animation to form
-      const form = document.querySelector('.auth-form');
-      form.classList.add('shake');
-      setTimeout(() => form.classList.remove('shake'), 500);
+      if (!result.success) {
+        setError('email', { message: result.error });
+      }
+    } catch (error) {
+      setError('email', { message: 'An unexpected error occurred' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-wrapper">
-      {/* Subtle background pattern */}
-      <div className="auth-bg-animation"></div>
-
-      <div className="auth-container">
-        <div className="auth-card glass-effect">
-          {/* Logo/Brand Section */}
-          <div className="auth-header">
-            <div className="auth-logo">
-              <div className="logo-icon">
-                <BrotherhoodLogo />
-              </div>
-              <span className="logo-text">Brotherhood</span>
-            </div>
-            <h1 className="auth-title">Create account</h1>
-            <p className="auth-subtitle">Join us to get started with your journey</p>
-          </div>
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="success-message">
-              <div className="error-icon">
-                <MdCheck />
-              </div>
-              {successMessage}
-            </div>
-          )}
-
-          {/* Error Message */}
-          {error && (
-            <div className="error-message modern-error">
-              <div className="error-icon">
-                <MdClose />
-              </div>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className={`auth-form ${isTyping ? 'typing' : ''}`}>
-            {/* First Name Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  id="first_name"
-                  name="first_name"
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="given-name"
-                />
-                <label htmlFor="first_name" className="floating-label">First Name</label>
-                <div className="input-icon">
-                  <MdPerson />
-                </div>
-              </div>
-            </div>
-
-            {/* Last Name Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  id="last_name"
-                  name="last_name"
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="family-name"
-                />
-                <label htmlFor="last_name" className="floating-label">Last Name</label>
-                <div className="input-icon">
-                  <MdPerson />
-                </div>
-              </div>
-            </div>
-
-            {/* Date of Birth Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type="date"
-                  id="date_of_birth"
-                  name="date_of_birth"
-                  value={formData.date_of_birth}
-                  onChange={handleChange}
-                  required
-                  className="modern-input"
-                  max={new Date().toISOString().split('T')[0]}
-                />
-                <label htmlFor="date_of_birth" className="floating-label">Date of Birth</label>
-                <div className="input-icon">
-                  <MdPerson />
-                </div>
-              </div>
-            </div>
-
-            {/* Email Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="email"
-                />
-                <label htmlFor="email" className="floating-label">Email address</label>
-                <div className="input-icon">
-                  <MdEmail />
-                </div>
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="new-password"
-                />
-                <label htmlFor="password" className="floating-label">Password</label>
-                <div className="input-icon">
-                  <MdLock />
-                </div>
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex="-1"
-                >
-                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
-                </button>
-              </div>
-              {/* Password Strength Indicator */}
-              <PasswordStrength password={formData.password} />
-            </div>
-
-            {/* Confirm Password Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="new-password"
-                />
-                <label htmlFor="confirmPassword" className="floating-label">Confirm Password</label>
-                <div className="input-icon">
-                  <MdLock />
-                </div>
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  tabIndex="-1"
-                >
-                  {showConfirmPassword ? <MdVisibilityOff /> : <MdVisibility />}
-                </button>
-              </div>
-              {formData.confirmPassword && formData.password && (
-                <div style={{ marginTop: '8px' }}>
-                  {formData.password === formData.confirmPassword ? (
-                    <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 500 }}>
-                      <MdCheck style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords match
-                    </span>
-                  ) : (
-                    <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 500 }}>
-                      <MdClose style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords don't match
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Terms and Conditions */}
-            <div className="form-options">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  name="acceptTerms"
-                  checked={formData.acceptTerms}
-                  onChange={handleChange}
-                />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-label">
-                  I agree to the{' '}
-                  <a href="/terms" className="forgot-link" style={{ fontSize: '14px' }}>
-                    Terms & Conditions
-                  </a>
-                </span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="submit-btn modern-submit"
-              disabled={loading}
-            >
-              <span className={loading ? 'btn-text-hidden' : ''}>
-                Create account
-              </span>
-              {loading && (
-                <div className="spinner">
-                  <div className="spinner-circle"></div>
-                </div>
-              )}
-            </button>
-          </form>
-
-          {/* Sign In Link */}
-          <div className="auth-footer">
-            <p>
-              Already have an account?{' '}
-              <Link to="/login" className="auth-link-modern">
-                Sign in <span className="link-arrow">→</span>
-              </Link>
-            </p>
-          </div>
+    <AuthLayout
+      title="Join the Brotherhood"
+      subtitle="Create your account and become part of a supportive community"
+      logoGradient="from-primary to-primary-dark"
+      footer={
+        <div className="p-4 bg-primary-lighter/10 rounded-lg border border-primary-lighter/20">
+          <p className="text-sm text-center text-gray-700">
+            <span className="font-semibold">Our Promise:</span> Your journey is safe
+            with us. We're building a community where men support each other through
+            life's challenges.
+          </p>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Name Fields - Side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            label="First Name"
+            type="text"
+            id="firstName"
+            placeholder="John"
+            error={errors.firstName}
+            icon={MdPerson}
+            register={register('firstName', {
+              required: 'First name is required',
+              validate: (value) => validateName(value, 'First name'),
+            })}
+          />
+
+          <FormField
+            label="Last Name"
+            type="text"
+            id="lastName"
+            placeholder="Doe"
+            error={errors.lastName}
+            icon={MdPerson}
+            register={register('lastName', {
+              required: 'Last name is required',
+              validate: (value) => validateName(value, 'Last name'),
+            })}
+          />
+        </div>
+
+        {/* Email */}
+        <FormField
+          label="Email Address"
+          type="email"
+          id="email"
+          placeholder="john@example.com"
+          error={errors.email}
+          icon={MdEmail}
+          register={register('email', {
+            required: 'Email is required',
+            validate: validateEmail,
+          })}
+        />
+
+        {/* Date of Birth */}
+        <FormField
+          label="Date of Birth"
+          type="date"
+          id="dateOfBirth"
+          error={errors.dateOfBirth}
+          icon={MdCalendarToday}
+          register={register('dateOfBirth', {
+            required: 'Date of birth is required',
+            validate: validateDateOfBirth,
+          })}
+        />
+
+        {/* Password */}
+        <div>
+          <PasswordInput
+            label="Password"
+            id="password"
+            placeholder="Create a strong password"
+            error={errors.password}
+            register={register('password', {
+              required: 'Password is required',
+              validate: validatePassword,
+            })}
+          />
+          <PasswordStrengthIndicator password={password} />
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label htmlFor="confirmPassword" className="form-label">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <input
+              type="password"
+              id="confirmPassword"
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value) => value === password || 'Passwords do not match',
+              })}
+              className={`form-input pl-10 ${
+                errors.confirmPassword ? 'border-danger focus:ring-danger' : ''
+              }`}
+              placeholder="Confirm your password"
+            />
+            <MdCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
+          </div>
+          {errors.confirmPassword && (
+            <p className="form-error mt-1">{errors.confirmPassword.message}</p>
+          )}
+        </div>
+
+        {/* Terms and Conditions */}
+        <div>
+          <label className="flex items-start">
+            <input
+              type="checkbox"
+              {...register('terms', {
+                required: 'You must accept the terms and conditions',
+              })}
+              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary mt-0.5"
+            />
+            <span className="ml-2 text-sm text-gray-600">
+              I agree to the{' '}
+              <Link to="/terms" className="text-primary hover:text-primary-dark">
+                Terms and Conditions
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-primary hover:text-primary-dark">
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
+          {errors.terms && <p className="form-error mt-1">{errors.terms.message}</p>}
+        </div>
+
+        {/* Submit Button */}
+        <ButtonLoader
+          type="submit"
+          loading={loading}
+          className="w-full btn btn-primary py-3"
+        >
+          Create Your Brotherhood Account
+        </ButtonLoader>
+
+        {/* Sign In Link */}
+        <div className="text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="text-primary hover:text-primary-dark font-semibold"
+            >
+              Sign In
+            </Link>
+          </p>
+        </div>
+      </form>
+    </AuthLayout>
   );
 };
 

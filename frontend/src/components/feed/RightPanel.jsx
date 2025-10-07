@@ -1,10 +1,11 @@
-import React from 'react';
-
+/**
+ * Right sidebar panel
+ */
 const RightPanel = () => {
   return (
-    <div className="right-panel">
-      {/* Empty right panel */}
-    </div>
+    <aside className="right-panel" aria-label="Sidebar">
+      {/* Empty panel for future use */}
+    </aside>
   );
 };
 

@@ -1,45 +1,28 @@
-import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../utils/axios';
-import Header from '../components/layout/Header';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../contexts/AuthContext';
+import Header from '../components/layouts/Header';
 import CreatePost from '../components/feed/CreatePost';
 import Post from '../components/feed/Post';
 import Sidebar from '../components/feed/Sidebar';
 import RightPanel from '../components/feed/RightPanel';
+import { PageLoader } from '../components/common/Loading';
 
 const Feed = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        const response = await axiosInstance.get('/api/auth/me');
-        setUser(response.data);
-        localStorage.setItem('user', JSON.stringify(response.data));
-        fetchPosts();
-      } catch (err) {
-        console.error('Authentication failed:', err);
-        localStorage.removeItem('user');
-        navigate('/login');
-      }
-    };
+  // Fetch posts using React Query
+  const { data: posts = [], isLoading } = useQuery({
+    queryKey: ['posts'],
+    queryFn: async () => {
+      // TODO: Replace with actual API call when backend is ready
+      // const response = await apiHelpers.get('/posts');
+      // return response.data;
 
-    // Check localStorage first
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-
-    verifyAuth();
-  }, [navigate]);
-
-  const fetchPosts = async () => {
-    try {
-      // For now, using mock data. Replace with actual API call
-      const mockPosts = [
+      // Mock data for now
+      return [
         {
           id: 1,
           user: {
@@ -87,43 +70,77 @@ const Feed = () => {
           liked: false
         }
       ];
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-      setPosts(mockPosts);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      setLoading(false);
-    }
-  };
+  // Create post mutation
+  const createPostMutation = useMutation({
+    mutationFn: async (newPost) => {
+      // TODO: Replace with actual API call
+      // const response = await apiHelpers.post('/posts', newPost);
+      // return response.data;
+      return newPost;
+    },
+    onSuccess: (newPost) => {
+      // Update the posts cache
+      queryClient.setQueryData(['posts'], (oldPosts) => [newPost, ...(oldPosts || [])]);
+    },
+  });
+
+  // Like post mutation
+  const likePostMutation = useMutation({
+    mutationFn: async (postId) => {
+      // TODO: Replace with actual API call
+      // const response = await apiHelpers.post(`/posts/${postId}/like`);
+      // return response.data;
+      return postId;
+    },
+    onMutate: async (postId) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey: ['posts'] });
+      const previousPosts = queryClient.getQueryData(['posts']);
+
+      queryClient.setQueryData(['posts'], (oldPosts) =>
+        oldPosts.map(post =>
+          post.id === postId
+            ? {
+                ...post,
+                liked: !post.liked,
+                likes: post.liked ? post.likes - 1 : post.likes + 1
+              }
+            : post
+        )
+      );
+
+      return { previousPosts };
+    },
+    onError: (err, postId, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['posts'], context.previousPosts);
+    },
+  });
 
   const handleCreatePost = (newPost) => {
-    // Add new post to the beginning of the posts array
-    setPosts([newPost, ...posts]);
+    createPostMutation.mutate(newPost);
   };
 
   const handleLikePost = (postId) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          liked: !post.liked,
-          likes: post.liked ? post.likes - 1 : post.likes + 1
-        };
-      }
-      return post;
-    }));
+    likePostMutation.mutate(postId);
   };
 
   const handleLogout = async () => {
     try {
-      await axiosInstance.post('/api/auth/logout');
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('user');
+      await logout();
       navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
+
+  if (isLoading) {
+    return <PageLoader message="Loading feed..." />;
+  }
 
   return (
     <div className="feed-container">
@@ -143,13 +160,7 @@ const Feed = () => {
 
             {/* Posts Feed */}
             <div className="posts-container">
-              {loading ? (
-                <div className="loading-posts">
-                  <div className="spinner">
-                    <div className="spinner-circle"></div>
-                  </div>
-                </div>
-              ) : posts.length > 0 ? (
+              {posts.length > 0 ? (
                 posts.map(post => (
                   <Post
                     key={post.id}

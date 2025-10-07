@@ -1,205 +1,130 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axiosInstance from '../utils/axios';
-import BrotherhoodLogo from '../components/BrotherhoodLogo';
-import {
-  MdEmail,
-  MdLock,
-  MdVisibility,
-  MdVisibilityOff,
-  MdClose
-} from 'react-icons/md';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { MdEmail } from 'react-icons/md';
+import { useAuth } from '../contexts/AuthContext';
+import { validateEmail, validatePassword } from '../utils/validation';
+import { ButtonLoader } from '../components/common/Loading';
+import AuthLayout from '../components/layouts/AuthLayout';
+import FormField from '../components/forms/FormField';
+import PasswordInput from '../components/forms/PasswordInput';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
-  const [error, setError] = useState('');
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
 
-  // Check for remembered email on mount
-  useEffect(() => {
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-      setFormData(prev => ({ ...prev, email: rememberedEmail, rememberMe: true }));
-    }
-  }, []);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm({
+    mode: 'onBlur',
+  });
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    });
-    setIsTyping(true);
-    setTimeout(() => setIsTyping(false), 100);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const onSubmit = async (data) => {
     setLoading(true);
 
     try {
-      const response = await axiosInstance.post('/api/auth/login', {
-        email: formData.email,
-        password: formData.password
+      const result = await login({
+        email: data.email,
+        password: data.password,
       });
 
-      // Handle remember me
-      if (formData.rememberMe) {
-        localStorage.setItem('rememberedEmail', formData.email);
-      } else {
-        localStorage.removeItem('rememberedEmail');
+      if (!result.success) {
+        setError('email', { message: result.error });
       }
-
-      // Store user info in localStorage (no token needed, using HTTP-only cookies)
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
-      // Navigate to feed
-      navigate('/feed');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password');
-      // Add shake animation to form
-      const form = document.querySelector('.auth-form');
-      form.classList.add('shake');
-      setTimeout(() => form.classList.remove('shake'), 500);
+    } catch (error) {
+      setError('email', { message: 'An unexpected error occurred' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-wrapper">
-      {/* Subtle background pattern */}
-      <div className="auth-bg-animation"></div>
+    <AuthLayout
+      title="Welcome Back, Brother"
+      subtitle="Your brotherhood awaits. Sign in to continue your journey."
+      logoGradient="from-primary to-primary-dark"
+      footer={
+        <div className="p-4 bg-primary-lighter/10 rounded-lg border border-primary-lighter/20">
+          <p className="text-sm text-center text-gray-700">
+            <span className="font-semibold">Need support?</span> Remember, you're
+            not alone. We're here to help you through your journey.
+          </p>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Email Field */}
+        <FormField
+          label="Email Address"
+          type="email"
+          id="email"
+          placeholder="Enter your email"
+          error={errors.email}
+          icon={MdEmail}
+          register={register('email', {
+            required: 'Email is required',
+            validate: validateEmail,
+          })}
+        />
 
-      <div className="auth-container">
-        <div className="auth-card glass-effect">
-          {/* Logo/Brand Section */}
-          <div className="auth-header">
-            <div className="auth-logo">
-              <div className="logo-icon">
-                <BrotherhoodLogo />
-              </div>
-              <span className="logo-text">Brotherhood</span>
-            </div>
-            <h1 className="auth-title">Welcome back</h1>
-            <p className="auth-subtitle">Sign in to continue to your account</p>
+        {/* Password Field */}
+        <PasswordInput
+          label="Password"
+          id="password"
+          placeholder="Enter your password"
+          error={errors.password}
+          register={register('password', {
+            required: 'Password is required',
+            validate: validatePassword,
+          })}
+        />
+
+        {/* Forgot Password */}
+        <div className="flex items-center justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-sm text-primary hover:text-primary-dark transition-colors"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
+        {/* Submit Button */}
+        <ButtonLoader
+          type="submit"
+          loading={loading}
+          className="w-full btn btn-primary py-3"
+        >
+          Sign In to Brotherhood
+        </ButtonLoader>
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="error-message modern-error">
-              <div className="error-icon">
-                <MdClose />
-              </div>
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className={`auth-form ${isTyping ? 'typing' : ''}`}>
-            {/* Email Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="email"
-                />
-                <label htmlFor="email" className="floating-label">Email address</label>
-                <div className="input-icon">
-                  <MdEmail />
-                </div>
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div className="form-group modern-input-group">
-              <div className="input-wrapper">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  placeholder=" "
-                  className="modern-input"
-                  autoComplete="current-password"
-                />
-                <label htmlFor="password" className="floating-label">Password</label>
-                <div className="input-icon">
-                  <MdLock />
-                </div>
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex="-1"
-                >
-                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
-                </button>
-              </div>
-            </div>
-
-            {/* Remember Me & Forgot Password */}
-            <div className="form-options">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleChange}
-                />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-label">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="forgot-link">
-                Forgot password?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="submit-btn modern-submit"
-              disabled={loading}
-            >
-              <span className={loading ? 'btn-text-hidden' : ''}>
-                Sign in
-              </span>
-              {loading && (
-                <div className="spinner">
-                  <div className="spinner-circle"></div>
-                </div>
-              )}
-            </button>
-          </form>
-
-          {/* Sign Up Link */}
-          <div className="auth-footer">
-            <p>
-              Don't have an account?{' '}
-              <Link to="/register" className="auth-link-modern">
-                Sign up <span className="link-arrow">→</span>
-              </Link>
-            </p>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-4 text-gray-500">
+              New to Brotherhood?
+            </span>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* Sign Up Link */}
+        <div className="text-center">
+          <Link
+            to="/register"
+            className="inline-flex items-center justify-center w-full py-3 px-4 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
+          >
+            Create Your Account
+            <span className="ml-2">→</span>
+          </Link>
+        </div>
+      </form>
+    </AuthLayout>
   );
 };
 
