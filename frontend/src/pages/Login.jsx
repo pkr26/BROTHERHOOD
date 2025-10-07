@@ -3,12 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
 import BrotherhoodLogo from '../components/BrotherhoodLogo';
 import {
-  EmailIcon,
-  LockIcon,
-  EyeIcon,
-  EyeOffIcon,
-  XIcon
-} from '../components/Icons';
+  MdEmail,
+  MdLock,
+  MdVisibility,
+  MdVisibilityOff,
+  MdClose
+} from 'react-icons/md';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -61,8 +61,8 @@ const Login = () => {
       // Store user info in localStorage (no token needed, using HTTP-only cookies)
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Navigate to feed
+      navigate('/feed');
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password');
       // Add shake animation to form
@@ -97,7 +97,7 @@ const Login = () => {
           {error && (
             <div className="error-message modern-error">
               <div className="error-icon">
-                <XIcon />
+                <MdClose />
               </div>
               {error}
             </div>
@@ -120,7 +120,7 @@ const Login = () => {
                 />
                 <label htmlFor="email" className="floating-label">Email address</label>
                 <div className="input-icon">
-                  <EmailIcon />
+                  <MdEmail />
                 </div>
               </div>
             </div>
@@ -141,7 +141,7 @@ const Login = () => {
                 />
                 <label htmlFor="password" className="floating-label">Password</label>
                 <div className="input-icon">
-                  <LockIcon />
+                  <MdLock />
                 </div>
                 <button
                   type="button"
@@ -149,7 +149,7 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
                 >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
               </div>
             </div>

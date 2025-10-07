@@ -3,14 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import axiosInstance from '../utils/axios';
 import BrotherhoodLogo from '../components/BrotherhoodLogo';
 import {
-  EmailIcon,
-  LockIcon,
-  EyeIcon,
-  EyeOffIcon,
-  UserIcon,
-  CheckIcon,
-  XIcon
-} from '../components/Icons';
+  MdEmail,
+  MdLock,
+  MdVisibility,
+  MdVisibilityOff,
+  MdPerson,
+  MdCheck,
+  MdClose
+} from 'react-icons/md';
 import PasswordStrength from '../components/PasswordStrength';
 
 const Register = () => {
@@ -21,6 +21,7 @@ const Register = () => {
     confirmPassword: '',
     first_name: '',
     last_name: '',
+    date_of_birth: '',
     acceptTerms: false
   });
   const [error, setError] = useState('');
@@ -129,7 +130,7 @@ const Register = () => {
           {successMessage && (
             <div className="success-message">
               <div className="error-icon">
-                <CheckIcon />
+                <MdCheck />
               </div>
               {successMessage}
             </div>
@@ -139,7 +140,7 @@ const Register = () => {
           {error && (
             <div className="error-message modern-error">
               <div className="error-icon">
-                <XIcon />
+                <MdClose />
               </div>
               {error}
             </div>
@@ -162,7 +163,7 @@ const Register = () => {
                 />
                 <label htmlFor="first_name" className="floating-label">First Name</label>
                 <div className="input-icon">
-                  <UserIcon />
+                  <MdPerson />
                 </div>
               </div>
             </div>
@@ -183,7 +184,27 @@ const Register = () => {
                 />
                 <label htmlFor="last_name" className="floating-label">Last Name</label>
                 <div className="input-icon">
-                  <UserIcon />
+                  <MdPerson />
+                </div>
+              </div>
+            </div>
+
+            {/* Date of Birth Field */}
+            <div className="form-group modern-input-group">
+              <div className="input-wrapper">
+                <input
+                  type="date"
+                  id="date_of_birth"
+                  name="date_of_birth"
+                  value={formData.date_of_birth}
+                  onChange={handleChange}
+                  required
+                  className="modern-input"
+                  max={new Date().toISOString().split('T')[0]}
+                />
+                <label htmlFor="date_of_birth" className="floating-label">Date of Birth</label>
+                <div className="input-icon">
+                  <MdPerson />
                 </div>
               </div>
             </div>
@@ -204,7 +225,7 @@ const Register = () => {
                 />
                 <label htmlFor="email" className="floating-label">Email address</label>
                 <div className="input-icon">
-                  <EmailIcon />
+                  <MdEmail />
                 </div>
               </div>
             </div>
@@ -225,7 +246,7 @@ const Register = () => {
                 />
                 <label htmlFor="password" className="floating-label">Password</label>
                 <div className="input-icon">
-                  <LockIcon />
+                  <MdLock />
                 </div>
                 <button
                   type="button"
@@ -233,7 +254,7 @@ const Register = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex="-1"
                 >
-                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
               </div>
               {/* Password Strength Indicator */}
@@ -256,7 +277,7 @@ const Register = () => {
                 />
                 <label htmlFor="confirmPassword" className="floating-label">Confirm Password</label>
                 <div className="input-icon">
-                  <LockIcon />
+                  <MdLock />
                 </div>
                 <button
                   type="button"
@@ -264,18 +285,18 @@ const Register = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   tabIndex="-1"
                 >
-                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  {showConfirmPassword ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
               </div>
               {formData.confirmPassword && formData.password && (
                 <div style={{ marginTop: '8px' }}>
                   {formData.password === formData.confirmPassword ? (
                     <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 500 }}>
-                      <CheckIcon style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords match
+                      <MdCheck style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords match
                     </span>
                   ) : (
                     <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 500 }}>
-                      <XIcon style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords don't match
+                      <MdClose style={{ width: '14px', height: '14px', display: 'inline' }} /> Passwords don't match
                     </span>
                   )}
                 </div>

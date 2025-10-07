@@ -28,6 +28,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         username=username,
         first_name=user_data.first_name,
         last_name=user_data.last_name,
+        date_of_birth=user_data.date_of_birth,
         hashed_password=hashed_password
     )
 
@@ -72,7 +73,8 @@ async def login(response: Response, user_data: UserLogin, db: Session = Depends(
             "email": user.email,
             "username": user.username,
             "first_name": user.first_name,
-            "last_name": user.last_name
+            "last_name": user.last_name,
+            "date_of_birth": user.date_of_birth.isoformat() if user.date_of_birth else None
         }
     )
 

@@ -8,6 +8,21 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const verifyAuth = async () => {
+      try {
+        const response = await axiosInstance.get('/api/auth/me');
+        setUser(response.data);
+        // Update localStorage with latest user data
+        localStorage.setItem('user', JSON.stringify(response.data));
+        setLoading(false);
+      } catch (err) {
+        // User is not authenticated or cookie expired
+        console.error('Authentication failed:', err);
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    };
+
     // Check if user data exists in localStorage
     const userData = localStorage.getItem('user');
 
@@ -18,20 +33,6 @@ const Dashboard = () => {
     // Verify authentication with backend using cookie
     verifyAuth();
   }, [navigate]);
-
-  const verifyAuth = async () => {
-    try {
-      const response = await axiosInstance.get('/api/auth/me');
-      setUser(response.data);
-      // Update localStorage with latest user data
-      localStorage.setItem('user', JSON.stringify(response.data));
-      setLoading(false);
-    } catch (err) {
-      // User is not authenticated or cookie expired
-      console.error('Authentication failed:', err);
-      handleLogout();
-    }
-  };
 
   const handleLogout = async () => {
     try {
