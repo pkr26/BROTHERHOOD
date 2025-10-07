@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MdHome, MdNotifications, MdMessage, MdSearch, MdMenu } from 'react-icons/md';
+import { MdHome, MdNotifications, MdMessage, MdSearch } from 'react-icons/md';
 import BrotherhoodLogo from '../BrotherhoodLogo';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { getUserInitials } from '../../utils/userHelpers';
+import logger from '../../utils/logger';
 
 /**
  * Main header navigation component
@@ -33,7 +34,7 @@ const Header = ({ user, onLogout }) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       // TODO: Implement search functionality
-      console.log('Searching for:', searchQuery);
+      logger.debug('Search initiated', { query: searchQuery });
     }
   };
 

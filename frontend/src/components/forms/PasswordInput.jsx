@@ -12,8 +12,6 @@ import { MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
  * @param {Object} props.error - Error object from react-hook-form
  * @param {string} props.className - Additional className
  * @param {Object} props.register - Register function from react-hook-form
- * @param {boolean} props.showStrengthIndicator - Show password strength indicator
- * @param {Function} props.onPasswordChange - Callback when password changes (for strength check)
  */
 const PasswordInput = ({
   label = 'Password',
@@ -22,8 +20,6 @@ const PasswordInput = ({
   error,
   className = '',
   register = {},
-  showStrengthIndicator = false,
-  onPasswordChange,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -45,10 +41,6 @@ const PasswordInput = ({
           placeholder={placeholder}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={error ? `${id}-error` : undefined}
-          onChange={(e) => {
-            register.onChange?.(e);
-            onPasswordChange?.(e.target.value);
-          }}
           {...props}
         />
         <MdLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />

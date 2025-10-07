@@ -8,6 +8,7 @@ import { ButtonLoader } from '../components/common/Loading';
 import AuthLayout from '../components/layouts/AuthLayout';
 import FormField from '../components/forms/FormField';
 import PasswordInput from '../components/forms/PasswordInput';
+import logger from '../utils/logger';
 
 const Login = () => {
   const { login } = useAuth();
@@ -24,6 +25,7 @@ const Login = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
+    logger.info('Login form submitted', { email: data.email });
 
     try {
       const result = await login({
@@ -32,9 +34,11 @@ const Login = () => {
       });
 
       if (!result.success) {
+        logger.warn('Login form validation failed', { email: data.email });
         setError('email', { message: result.error });
       }
     } catch (error) {
+      logger.error('Login form error', { email: data.email, error: error.message });
       setError('email', { message: 'An unexpected error occurred' });
     } finally {
       setLoading(false);

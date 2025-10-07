@@ -1,9 +1,44 @@
-import { Suspense } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
+import logger from '../../utils/logger';
 
-// Full page loader
+// Full page loader with performance tracking
 export const PageLoader = ({ message = "Loading..." }) => {
+  const startTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    const startTime = startTimeRef.current;
+
+    // Log if loading takes too long (performance issue)
+    const warningTimer = setTimeout(() => {
+      logger.warn('Page loader showing for extended period', {
+        message,
+        duration: '5s'
+      });
+    }, 5000); // Warn after 5 seconds
+
+    const errorTimer = setTimeout(() => {
+      logger.error('Page loader timeout - possible performance issue', {
+        message,
+        duration: '15s'
+      });
+    }, 15000); // Error after 15 seconds
+
+    return () => {
+      clearTimeout(warningTimer);
+      clearTimeout(errorTimer);
+
+      const duration = Date.now() - startTime;
+      if (duration > 3000) {
+        logger.info('Page loading completed', {
+          message,
+          duration: `${(duration / 1000).toFixed(2)}s`
+        });
+      }
+    };
+  }, [message]);
+
   return (
     <div className="fixed inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
       <motion.div
@@ -89,41 +124,6 @@ export const Skeleton = ({
   );
 };
 
-// Skeleton loader for lists
-export const SkeletonList = ({ count = 3, variant = 'text', className = '' }) => {
-  return (
-    <div className={clsx('space-y-3', className)}>
-      {Array.from({ length: count }).map((_, index) => (
-        <Skeleton key={index} variant={variant} />
-      ))}
-    </div>
-  );
-};
-
-// Card skeleton
-export const CardSkeleton = ({ className = '' }) => {
-  return (
-    <div className={clsx('card', className)}>
-      <div className="flex items-center mb-4">
-        <Skeleton variant="circular" className="mr-3" />
-        <div className="flex-1">
-          <Skeleton variant="text" width="40%" className="mb-2" />
-          <Skeleton variant="text" width="20%" height="0.75rem" />
-        </div>
-      </div>
-      <Skeleton variant="text" className="mb-2" />
-      <Skeleton variant="text" className="mb-2" />
-      <Skeleton variant="text" width="70%" className="mb-4" />
-      <Skeleton variant="rectangular" height="12rem" />
-      <div className="flex gap-4 mt-4">
-        <Skeleton variant="text" width="60px" />
-        <Skeleton variant="text" width="60px" />
-        <Skeleton variant="text" width="60px" />
-      </div>
-    </div>
-  );
-};
-
 // Loading button state
 export const ButtonLoader = ({ loading, children, className = '', ...props }) => {
   return (
@@ -141,44 +141,3 @@ export const ButtonLoader = ({ loading, children, className = '', ...props }) =>
     </button>
   );
 };
-
-// Lazy load wrapper with suspense
-export const LazyLoadWrapper = ({ children, fallback = <PageLoader /> }) => {
-  return (
-    <Suspense fallback={fallback}>
-      {children}
-    </Suspense>
-  );
-};
-
-// Progress bar
-export const ProgressBar = ({ progress, className = '', showLabel = false }) => {
-  return (
-    <div className={clsx('w-full', className)}>
-      <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-        <motion.div
-          className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-accent rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        />
-      </div>
-      {showLabel && (
-        <p className="text-sm text-gray-600 mt-1 text-center">{progress}%</p>
-      )}
-    </div>
-  );
-};
-
-const LoadingComponents = {
-  PageLoader,
-  Spinner,
-  Skeleton,
-  SkeletonList,
-  CardSkeleton,
-  ButtonLoader,
-  LazyLoadWrapper,
-  ProgressBar,
-};
-
-export default LoadingComponents;

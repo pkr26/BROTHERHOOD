@@ -1,13 +1,6 @@
 import React, { Component } from 'react';
 import { HiExclamationTriangle } from 'react-icons/hi2';
-
-// HOC to inject navigate function
-export const withNavigation = (Component) => {
-  return (props) => {
-    // We can't use hooks in class components, so we'll handle navigation differently
-    return <Component {...props} />;
-  };
-};
+import logger from '../../utils/logger';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -20,14 +13,12 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error to error reporting service
-    console.error('Error caught by boundary:', error, errorInfo);
-
-    // You can also log to an error tracking service like Sentry
-    if (process.env.NODE_ENV === 'production') {
-      // Log to error tracking service
-      // Sentry.captureException(error, { extra: errorInfo });
-    }
+    // Log error with appropriate context
+    logger.error('React Error Boundary caught error', {
+      error: error.message,
+      componentStack: errorInfo.componentStack,
+      stack: error.stack,
+    });
 
     this.setState({
       error,
@@ -36,6 +27,9 @@ class ErrorBoundary extends Component {
   }
 
   handleReset = () => {
+    logger.info('Error boundary reset triggered', {
+      previousError: this.state.error?.message
+    });
     this.setState({ hasError: false, error: null, errorInfo: null });
     if (this.props.onReset) {
       this.props.onReset();

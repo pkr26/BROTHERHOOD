@@ -1,6 +1,7 @@
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 import toast from 'react-hot-toast';
+import logger from '../utils/logger';
 
 /**
  * API Configuration with HTTP-only Cookie Authentication
@@ -89,17 +90,17 @@ api.interceptors.request.use(
       config.headers['X-CSRF-Token'] = csrfToken;
     }
 
-    // Log request in development (no sensitive data)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🚀 ${config.method?.toUpperCase()} ${config.url}`);
-    }
+    // Log request
+    logger.debug('API Request', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      requestId: config.headers['X-Request-ID'],
+    });
 
     return config;
   },
   (error) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Request error:', error.message);
-    }
+    logger.error('Request configuration error', { error: error.message });
     return Promise.reject(error);
   }
 );
@@ -112,19 +113,33 @@ api.interceptors.response.use(
       response.data = sanitizeData(response.data);
     }
 
-    // Log response in development (status only for security)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`✅ ${response.status} ${response.config.url}`);
-    }
+    // Log successful response
+    logger.debug('API Response', {
+      status: response.status,
+      url: response.config.url,
+    });
 
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
 
-    // Log error in development (message only, no sensitive data)
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`❌ ${error.response?.status || 'Network Error'} ${originalRequest?.url}`);
+    // Log error with appropriate level
+    const status = error.response?.status;
+    const logContext = {
+      status: status || 'Network Error',
+      url: originalRequest?.url,
+      error: error.message,
+    };
+
+    if (status >= 500) {
+      logger.error('API Server Error', logContext);
+    } else if (status === 401 || status === 403) {
+      logger.warn('API Authentication/Authorization Error', logContext);
+    } else if (!error.response) {
+      logger.error('API Network Error', logContext);
+    } else {
+      logger.debug('API Client Error', logContext);
     }
 
     // Handle network errors
@@ -219,64 +234,140 @@ export const apiHelpers = {
       const maxAge = config.cacheTime || 5 * 60 * 1000;
 
       if (cacheAge < maxAge) {
+        logger.debug('API Cache hit', { url, cacheAge: `${Math.round(cacheAge / 1000)}s` });
         return { data, cached: true };
       } else {
         // Remove expired cache
+        logger.debug('API Cache expired', { url });
         apiCache.delete(cacheKey);
       }
     }
 
-    const response = await api.get(url, config);
+    try {
+      logger.info('API GET request', { url, params: config.params });
+      const response = await api.get(url, config);
 
-    if (config.cache !== false) {
-      apiCache.set(cacheKey, {
-        data: response.data,
-        timestamp: Date.now(),
+      if (config.cache !== false) {
+        apiCache.set(cacheKey, {
+          data: response.data,
+          timestamp: Date.now(),
+        });
+        pruneCache();
+        logger.debug('API Response cached', { url });
+      }
+
+      return response;
+    } catch (error) {
+      logger.error('API GET request failed', {
+        url,
+        params: config.params,
+        error: error.message,
+        status: error.response?.status
       });
-      pruneCache();
+      throw error;
     }
-
-    return response;
   },
 
   // Clear cache manually if needed
   clearCache: () => {
+    logger.info('API Cache cleared', { cacheSize: apiCache.size });
     apiCache.clear();
   },
 
   // POST request with CSRF protection
-  post: (url, data, config = {}) => {
-    return api.post(url, data, config);
+  post: async (url, data, config = {}) => {
+    try {
+      logger.info('API POST request', { url });
+      const response = await api.post(url, data, config);
+      logger.info('API POST success', { url, status: response.status });
+      return response;
+    } catch (error) {
+      logger.error('API POST request failed', {
+        url,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw error;
+    }
   },
 
   // PUT request
-  put: (url, data, config = {}) => {
-    return api.put(url, data, config);
+  put: async (url, data, config = {}) => {
+    try {
+      logger.info('API PUT request', { url });
+      const response = await api.put(url, data, config);
+      logger.info('API PUT success', { url, status: response.status });
+      return response;
+    } catch (error) {
+      logger.error('API PUT request failed', {
+        url,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw error;
+    }
   },
 
   // PATCH request
-  patch: (url, data, config = {}) => {
-    return api.patch(url, data, config);
+  patch: async (url, data, config = {}) => {
+    try {
+      logger.info('API PATCH request', { url });
+      const response = await api.patch(url, data, config);
+      logger.info('API PATCH success', { url, status: response.status });
+      return response;
+    } catch (error) {
+      logger.error('API PATCH request failed', {
+        url,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw error;
+    }
   },
 
   // DELETE request
-  delete: (url, config = {}) => {
-    return api.delete(url, config);
+  delete: async (url, config = {}) => {
+    try {
+      logger.info('API DELETE request', { url });
+      const response = await api.delete(url, config);
+      logger.info('API DELETE success', { url, status: response.status });
+      return response;
+    } catch (error) {
+      logger.error('API DELETE request failed', {
+        url,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw error;
+    }
   },
 
   // Upload file with progress
-  upload: (url, formData, onProgress) => {
-    return api.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (onProgress) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress(percentCompleted);
-        }
-      },
-    });
+  upload: async (url, formData, onProgress) => {
+    try {
+      logger.info('API File upload started', { url });
+      const response = await api.post(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+            logger.debug('Upload progress', { url, progress: `${percentCompleted}%` });
+          }
+        },
+      });
+      logger.info('API File upload completed', { url, status: response.status });
+      return response;
+    } catch (error) {
+      logger.error('API File upload failed', {
+        url,
+        error: error.message,
+        status: error.response?.status
+      });
+      throw error;
+    }
   },
 };
 

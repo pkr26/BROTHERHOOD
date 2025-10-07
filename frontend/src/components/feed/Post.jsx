@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { MdMoreVert, MdShare } from 'react-icons/md';
+import { MdMoreVert } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { EmpathyIcon, SupportIcon, StrengthIcon } from '../Icons';
 import { formatUserAge } from '../../utils/userHelpers';
 import { sanitizeInput } from '../../utils/validation';
+import logger from '../../utils/logger';
 
 // Comment validation constants
 const MAX_COMMENT_LENGTH = 500;
@@ -25,13 +25,17 @@ const Post = ({ post, onLike }) => {
     const trimmedComment = comment.trim();
 
     if (!trimmedComment) {
+      logger.debug('Empty comment submitted', { postId: post.id });
       return;
     }
 
     if (trimmedComment.length > MAX_COMMENT_LENGTH) {
+      logger.warn('Comment too long', { postId: post.id, length: trimmedComment.length });
       toast.error(`Comment is too long. Maximum ${MAX_COMMENT_LENGTH} characters allowed.`);
       return;
     }
+
+    logger.info('Adding comment to post', { postId: post.id, commentLength: trimmedComment.length });
 
     // Sanitize comment to prevent XSS
     const sanitizedComment = sanitizeInput(trimmedComment, {
@@ -49,6 +53,7 @@ const Post = ({ post, onLike }) => {
       },
     ]);
     setComment('');
+    logger.debug('Comment added successfully', { postId: post.id });
   };
 
   return (

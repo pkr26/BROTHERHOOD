@@ -14,6 +14,7 @@ import AuthLayout from '../components/layouts/AuthLayout';
 import FormField from '../components/forms/FormField';
 import PasswordInput from '../components/forms/PasswordInput';
 import PasswordStrengthIndicator from '../components/forms/PasswordStrengthIndicator';
+import logger from '../utils/logger';
 
 const Register = () => {
   const { register: registerUser } = useAuth();
@@ -33,6 +34,7 @@ const Register = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
+    logger.info('Registration form submitted', { email: data.email });
 
     try {
       const result = await registerUser({
@@ -44,9 +46,11 @@ const Register = () => {
       });
 
       if (!result.success) {
+        logger.warn('Registration form validation failed', { email: data.email });
         setError('email', { message: result.error });
       }
     } catch (error) {
+      logger.error('Registration form error', { email: data.email, error: error.message });
       setError('email', { message: 'An unexpected error occurred' });
     } finally {
       setLoading(false);

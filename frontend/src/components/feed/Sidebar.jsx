@@ -1,13 +1,12 @@
 import { Link } from 'react-router-dom';
-import { getUserInitials, getFullName } from '../../utils/userHelpers';
 
 /**
  * Sidebar navigation component
  *
  * @param {Object} props
- * @param {Object} props.user - Current user object
+ * @param {Object} props.user - Current user object (reserved for future user-specific content)
  */
-const Sidebar = ({ user }) => {
+const Sidebar = ({ user }) => { // TODO: Use user prop for personalized sidebar content
   const menuItems = [
     { icon: '👥', label: 'Friends', path: '/friends' },
     { icon: '👨‍👩‍👧‍👦', label: 'Groups', path: '/groups' },

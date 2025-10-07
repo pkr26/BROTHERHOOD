@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -14,6 +14,9 @@ import { PageLoader } from './components/common/Loading';
 
 // Query Client
 import queryClient from './lib/queryClient';
+
+// Logger
+import logger from './utils/logger';
 
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login'));
@@ -34,6 +37,27 @@ const NotFound = () => (
 );
 
 function App() {
+  useEffect(() => {
+    logger.info('Brotherhood App initialized', {
+      environment: process.env.NODE_ENV,
+      version: process.env.REACT_APP_VERSION || 'dev'
+    });
+
+    // Log unhandled promise rejections
+    const handleUnhandledRejection = (event) => {
+      logger.error('Unhandled promise rejection', {
+        reason: event.reason?.message || event.reason,
+        stack: event.reason?.stack
+      });
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import logger from '../utils/logger';
 
 const AuthContext = createContext({});
 
@@ -46,11 +47,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.get('/auth/me');
       setUser(response.data);
+      logger.info('Authentication check successful', { userId: response.data.id });
       return true;
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Auth check failed:', error.message);
-      }
+      logger.debug('Authentication check failed', { error: error.message });
       setUser(null);
       return false;
     } finally {
@@ -62,16 +62,23 @@ export const AuthProvider = ({ children }) => {
   // Login function (backend sets HTTP-only cookie)
   const login = async (credentials) => {
     try {
+      logger.info('Login attempt', { email: credentials.email });
       const response = await api.post('/auth/login', credentials);
       const { user: userData } = response.data;
 
       setUser(userData);
+      logger.info('Login successful', { userId: userData.id, email: userData.email });
       toast.success(`Welcome back, ${userData.first_name}!`);
       navigate('/feed');
 
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.detail || 'Invalid credentials';
+      logger.warn('Login failed', {
+        email: credentials.email,
+        error: message,
+        status: error.response?.status
+      });
       toast.error(message);
       return { success: false, error: message };
     }
@@ -80,16 +87,23 @@ export const AuthProvider = ({ children }) => {
   // Register function (backend sets HTTP-only cookie)
   const register = async (userData) => {
     try {
+      logger.info('Registration attempt', { email: userData.email });
       const response = await api.post('/auth/register', userData);
       const { user: newUser } = response.data;
 
       setUser(newUser);
+      logger.info('Registration successful', { userId: newUser.id, email: newUser.email });
       toast.success('Welcome to Brotherhood! Your account has been created.');
       navigate('/feed');
 
       return { success: true };
     } catch (error) {
       const message = error.response?.data?.detail || 'Registration failed';
+      logger.warn('Registration failed', {
+        email: userData.email,
+        error: message,
+        status: error.response?.status
+      });
       toast.error(message);
       return { success: false, error: message };
     }
@@ -99,8 +113,9 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async (showMessage = true) => {
     try {
       await api.post('/auth/logout');
+      logger.info('User logged out successfully');
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout error', { error: error.message });
     } finally {
       setUser(null);
 
@@ -115,15 +130,22 @@ export const AuthProvider = ({ children }) => {
   // Update user profile
   const updateProfile = async (updates) => {
     try {
+      logger.info('Profile update attempt', { userId: user?.id });
       const response = await api.patch('/auth/profile', updates);
       const updatedUser = response.data;
 
       setUser(updatedUser);
+      logger.info('Profile updated successfully', { userId: updatedUser.id });
       toast.success('Profile updated successfully');
 
       return { success: true, user: updatedUser };
     } catch (error) {
       const message = error.response?.data?.detail || 'Failed to update profile';
+      logger.error('Profile update failed', {
+        userId: user?.id,
+        error: message,
+        status: error.response?.status
+      });
       toast.error(message);
       return { success: false, error: message };
     }
@@ -134,14 +156,14 @@ export const AuthProvider = ({ children }) => {
     let isMounted = true;
     const timeoutId = setTimeout(() => {
       if (isMounted && loading) {
-        console.error('Auth check timed out');
+        logger.warn('Authentication check timed out after 10 seconds');
         setLoading(false);
       }
     }, 10000); // 10 second timeout
 
     checkAuth().catch((err) => {
       if (isMounted) {
-        console.error('Failed to check authentication:', err);
+        logger.error('Failed to check authentication', { error: err.message });
         setLoading(false);
       }
     }).finally(() => {
@@ -152,6 +174,7 @@ export const AuthProvider = ({ children }) => {
       isMounted = false;
       clearTimeout(timeoutId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run on mount
 
   const value = {

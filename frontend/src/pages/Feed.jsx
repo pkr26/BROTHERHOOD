@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/layouts/Header';
@@ -7,9 +6,9 @@ import Post from '../components/feed/Post';
 import Sidebar from '../components/feed/Sidebar';
 import RightPanel from '../components/feed/RightPanel';
 import { PageLoader } from '../components/common/Loading';
+import logger from '../utils/logger';
 
 const Feed = () => {
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
 
@@ -17,12 +16,14 @@ const Feed = () => {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts'],
     queryFn: async () => {
-      // TODO: Replace with actual API call when backend is ready
-      // const response = await apiHelpers.get('/posts');
-      // return response.data;
+      try {
+        logger.info('Fetching posts for feed', { userId: user?.id });
+        // TODO: Replace with actual API call when backend is ready
+        // const response = await apiHelpers.get('/posts');
+        // return response.data;
 
-      // Mock data for now
-      return [
+        // Mock data for now
+        return [
         {
           id: 1,
           user: {
@@ -70,6 +71,10 @@ const Feed = () => {
           liked: false
         }
       ];
+      } catch (error) {
+        logger.error('Failed to fetch posts', { userId: user?.id, error: error.message });
+        throw error;
+      }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -77,26 +82,43 @@ const Feed = () => {
   // Create post mutation
   const createPostMutation = useMutation({
     mutationFn: async (newPost) => {
-      // TODO: Replace with actual API call
-      // const response = await apiHelpers.post('/posts', newPost);
-      // return response.data;
-      return newPost;
+      try {
+        logger.info('Creating new post', { userId: user?.id });
+        // TODO: Replace with actual API call
+        // const response = await apiHelpers.post('/posts', newPost);
+        // return response.data;
+        return newPost;
+      } catch (error) {
+        logger.error('Failed to create post', { userId: user?.id, error: error.message });
+        throw error;
+      }
     },
     onSuccess: (newPost) => {
+      logger.info('Post created successfully', { userId: user?.id });
       // Update the posts cache
       queryClient.setQueryData(['posts'], (oldPosts) => [newPost, ...(oldPosts || [])]);
     },
+    onError: (error) => {
+      logger.error('Create post mutation failed', { userId: user?.id, error: error.message });
+    }
   });
 
   // Like post mutation
   const likePostMutation = useMutation({
     mutationFn: async (postId) => {
-      // TODO: Replace with actual API call
-      // const response = await apiHelpers.post(`/posts/${postId}/like`);
-      // return response.data;
-      return postId;
+      try {
+        logger.info('Toggling like on post', { userId: user?.id, postId });
+        // TODO: Replace with actual API call
+        // const response = await apiHelpers.post(`/posts/${postId}/like`);
+        // return response.data;
+        return postId;
+      } catch (error) {
+        logger.error('Failed to like post', { userId: user?.id, postId, error: error.message });
+        throw error;
+      }
     },
     onMutate: async (postId) => {
+      logger.debug('Optimistically updating like', { postId });
       // Optimistic update
       await queryClient.cancelQueries({ queryKey: ['posts'] });
       const previousPosts = queryClient.getQueryData(['posts']);
@@ -116,6 +138,7 @@ const Feed = () => {
       return { previousPosts };
     },
     onError: (err, postId, context) => {
+      logger.warn('Like post failed, rolling back', { postId, error: err.message });
       // Rollback on error
       queryClient.setQueryData(['posts'], context.previousPosts);
     },
@@ -131,10 +154,9 @@ const Feed = () => {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      navigate('/login');
+      await logout(); // logout() already handles navigation to /login
     } catch (error) {
-      console.error('Logout error:', error);
+      logger.error('Logout failed from Feed page', { error: error.message });
     }
   };
 

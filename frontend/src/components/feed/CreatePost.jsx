@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { MdPhotoLibrary, MdPeople, MdMood, MdLocationOn } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { GrowthIcon, CommunityIcon, ChallengeIcon, ResilienceIcon } from '../Icons';
-import { getUserInitials, getDisplayName, getFullName, formatUserAge } from '../../utils/userHelpers';
+import { getUserInitials, getDisplayName, getFullName } from '../../utils/userHelpers';
 import { sanitizeInput } from '../../utils/validation';
+import logger from '../../utils/logger';
 
 // Content validation constants
 const MAX_POST_LENGTH = 5000;
@@ -28,24 +28,31 @@ const CreatePost = ({ user, onCreatePost }) => {
 
     // Validation
     if (!trimmedContent) {
+      logger.warn('Empty post content submitted', { userId: user?.id });
       toast.error('Post content cannot be empty');
       return;
     }
 
     if (trimmedContent.length < MIN_POST_LENGTH) {
+      logger.warn('Post too short', { userId: user?.id, length: trimmedContent.length });
       toast.error('Post is too short');
       return;
     }
 
     if (trimmedContent.length > MAX_POST_LENGTH) {
+      logger.warn('Post too long', { userId: user?.id, length: trimmedContent.length });
       toast.error(`Post is too long. Maximum ${MAX_POST_LENGTH} characters allowed.`);
       return;
     }
 
     // Prevent double submission
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      logger.debug('Duplicate post submission prevented', { userId: user?.id });
+      return;
+    }
 
     setIsSubmitting(true);
+    logger.info('Creating new post', { userId: user?.id, contentLength: trimmedContent.length });
 
     try {
       // Sanitize content to prevent XSS
@@ -71,12 +78,13 @@ const CreatePost = ({ user, onCreatePost }) => {
       };
 
       await onCreatePost(newPost);
+      logger.info('Post created successfully', { userId: user?.id, postId: newPost.id });
       setPostContent('');
       setIsExpanded(false);
       toast.success('Post created successfully!');
     } catch (error) {
+      logger.error('Post creation failed', { error: error.message, userId: user?.id });
       toast.error('Failed to create post. Please try again.');
-      console.error('Post creation error:', error);
     } finally {
       setIsSubmitting(false);
     }

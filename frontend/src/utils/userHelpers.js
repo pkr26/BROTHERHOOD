@@ -40,6 +40,6 @@ export const getDisplayName = (user) => {
  * @returns {string} Formatted age string
  */
 export const formatUserAge = (age) => {
-  if (!age) return '';
+  if (!age || isNaN(Number(age))) return '';
   return `Age: ${age}`;
 };

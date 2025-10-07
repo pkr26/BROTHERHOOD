@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import logger from './logger';
 
 /**
  * Email validation with improved regex
@@ -6,7 +7,7 @@ import DOMPurify from 'dompurify';
  */
 export const validateEmail = (email) => {
   // More robust email validation regex
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
   if (!email) return 'Email is required';
   if (email.length > 254) return 'Email is too long';
@@ -22,7 +23,16 @@ export const validateEmail = (email) => {
 
   const domain = email.split('@')[1];
   if (commonDomainTypos[domain]) {
+    logger.debug('Email typo detected', {
+      incorrectDomain: domain,
+      suggestedDomain: commonDomainTypos[domain]
+    });
     return `Did you mean ${email.replace(domain, commonDomainTypos[domain])}?`;
+  }
+
+  // Log suspicious email patterns
+  if (email.includes('..') || email.startsWith('.') || email.endsWith('.')) {
+    logger.warn('Suspicious email pattern detected', { email });
   }
 
   return true;
@@ -46,7 +56,13 @@ export const validatePassword = (password) => {
 
   // Check strength score
   const strength = getPasswordStrength(password);
-  if (strength.score < 3) return 'Password is too weak. Please make it stronger.';
+  if (strength.score < 3) {
+    logger.debug('Weak password attempt', {
+      score: strength.score,
+      strength: strength.strength
+    });
+    return 'Password is too weak. Please make it stronger.';
+  }
 
   return true;
 };
@@ -118,18 +134,6 @@ export const getPasswordStrength = (password) => {
   };
 };
 
-/**
- * Username validation
- */
-export const validateUsername = (username) => {
-  if (!username) return 'Username is required';
-  if (username.length < 3) return 'Username must be at least 3 characters';
-  if (username.length > 20) return 'Username must be less than 20 characters';
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    return 'Username can only contain letters, numbers, and underscores';
-  }
-  return true;
-};
 
 /**
  * Name validation
@@ -162,34 +166,7 @@ export const validateDateOfBirth = (date) => {
   return true;
 };
 
-/**
- * Phone number validation
- */
-export const validatePhone = (phone) => {
-  if (!phone) return true; // Phone is optional
 
-  // Remove all non-digits
-  const cleaned = phone.replace(/\D/g, '');
-
-  if (cleaned.length < 10) return 'Phone number must be at least 10 digits';
-  if (cleaned.length > 15) return 'Phone number is too long';
-
-  return true;
-};
-
-/**
- * URL validation
- */
-export const validateUrl = (url) => {
-  if (!url) return true; // URL is optional
-
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return 'Please enter a valid URL';
-  }
-};
 
 /**
  * Sanitize user input to prevent XSS
@@ -204,147 +181,22 @@ export const sanitizeInput = (input, options = {}) => {
     ...options
   };
 
-  return DOMPurify.sanitize(input, defaultOptions);
-};
+  const sanitized = DOMPurify.sanitize(input, defaultOptions);
 
-// Initialize DOMPurify hooks once to prevent memory leaks
-let hooksInitialized = false;
-
-const initializeDOMPurifyHooks = () => {
-  if (hooksInitialized) return;
-
-  // Add rel="noopener noreferrer" to all links
-  DOMPurify.addHook('afterSanitizeAttributes', function(node) {
-    if (node.tagName === 'A') {
-      node.setAttribute('target', '_blank');
-      node.setAttribute('rel', 'noopener noreferrer');
+  // Log potential XSS attempts
+  if (sanitized !== input) {
+    const removed = input.length - sanitized.length;
+    if (removed > 10) { // Only log significant sanitization
+      logger.warn('Potentially malicious input sanitized', {
+        originalLength: input.length,
+        sanitizedLength: sanitized.length,
+        removedChars: removed,
+        containsScript: input.toLowerCase().includes('<script'),
+        containsIframe: input.toLowerCase().includes('<iframe'),
+        containsOnEvent: /on\w+\s*=/i.test(input)
+      });
     }
-  });
-
-  hooksInitialized = true;
-};
-
-/**
- * Sanitize HTML content
- */
-export const sanitizeHtml = (html, options = {}) => {
-  if (!html) return '';
-
-  // Initialize hooks once
-  initializeDOMPurifyHooks();
-
-  const defaultOptions = {
-    ALLOWED_TAGS: [
-      'b', 'i', 'em', 'strong', 'a', 'br', 'p',
-      'ul', 'ol', 'li', 'blockquote', 'code', 'pre',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
-    ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-    ALLOW_DATA_ATTR: false,
-    ADD_ATTR: ['target', 'rel'],
-    ...options
-  };
-
-  return DOMPurify.sanitize(html, defaultOptions);
-};
-
-/**
- * File validation
- */
-export const validateFile = (file, options = {}) => {
-  const {
-    maxSize = 5 * 1024 * 1024, // 5MB default
-    allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-    allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-  } = options;
-
-  if (!file) return 'File is required';
-
-  // Check file size
-  if (file.size > maxSize) {
-    const sizeMB = (maxSize / 1024 / 1024).toFixed(0);
-    return `File size must be less than ${sizeMB}MB`;
   }
 
-  // Check file type
-  if (!allowedTypes.includes(file.type)) {
-    return `File type must be one of: ${allowedTypes.join(', ')}`;
-  }
-
-  // Check file extension
-  const fileName = file.name.toLowerCase();
-  const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
-
-  if (!hasValidExtension) {
-    return `File extension must be one of: ${allowedExtensions.join(', ')}`;
-  }
-
-  return true;
+  return sanitized;
 };
-
-/**
- * Profanity filter (basic implementation)
- */
-export const containsProfanity = (text) => {
-  // This is a very basic implementation
-  // In production, use a proper profanity detection library
-  const profanityList = [
-    // Add actual profanity words here
-    // For demo purposes, using placeholder
-    'badword1', 'badword2'
-  ];
-
-  const lowercaseText = text.toLowerCase();
-  return profanityList.some(word => lowercaseText.includes(word));
-};
-
-/**
- * Credit card validation (basic)
- */
-export const validateCreditCard = (number) => {
-  if (!number) return 'Card number is required';
-
-  // Remove spaces and dashes
-  const cleaned = number.replace(/[\s-]/g, '');
-
-  if (!/^\d+$/.test(cleaned)) return 'Card number must contain only digits';
-  if (cleaned.length < 13 || cleaned.length > 19) return 'Invalid card number length';
-
-  // Luhn algorithm
-  let sum = 0;
-  let isEven = false;
-
-  for (let i = cleaned.length - 1; i >= 0; i--) {
-    let digit = parseInt(cleaned[i], 10);
-
-    if (isEven) {
-      digit *= 2;
-      if (digit > 9) digit -= 9;
-    }
-
-    sum += digit;
-    isEven = !isEven;
-  }
-
-  if (sum % 10 !== 0) return 'Invalid card number';
-
-  return true;
-};
-
-const validationUtils = {
-  validateEmail,
-  validatePassword,
-  getPasswordStrength,
-  validateUsername,
-  validateName,
-  validateDateOfBirth,
-  validatePhone,
-  validateUrl,
-  sanitizeInput,
-  sanitizeHtml,
-  validateFile,
-  containsProfanity,
-  validateCreditCard,
-};
-
-export default validationUtils;
